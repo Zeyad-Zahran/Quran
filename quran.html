@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quran</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            direction: rtl;
+            background-color: #f5eed2;
+        }
+        #quran-container {
+            margin: 20px auto;
+            width: 80%;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            border: 4px solid #180c0cbf;
+        }
+        .styleq {
+            font-size: 20px;
+            font-weight: bold;
+            display: block;
+            margin: 35px;
+        }
+        span {
+            color: red;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            margin: 20px;
+            border-radius: 10px;
+        }
+        .quran-a{
+            margin: 20px;
+            border-radius: 10px;
+            background-color: #f5eed2;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 4px solid #180c0cbf;
+        }
+        .quran-a input{
+            padding: 5px;
+            font-size: 16px;
+            margin: 20px;
+            border-radius: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>اختر سورة من القرآن</h1>
+
+    <select id="surah-list" onchange="getSurah()">
+        <option value="">اختر سورة</option>
+    </select>
+
+    <h2>🎙️ اختر القارئ</h2>
+    <select id="reciter-list" onchange="updateAudio()">
+        <option value="afs">مشاري راشد العفاسي</option>
+        <option value="minsh">محمد صديق المنشاوي</option>
+    </select>
+
+    <div id="quran-container">🔽 اختر سورة لعرضها هنا...</div>
+    <audio class="quran-a" id="quran-audio" controls hidden></audio>
+    <footer>
+        <p>صدقه جاريه</p>
+    </footer>
+
+    <script>
+        let surahData = [];
+        let selectedSurah = 1;
+        let reciterPaths = {
+            "afs": "https://server8.mp3quran.net/afs/",
+            "husr": "https://server12.mp3quran.net/husr/",
+            "minsh": "https://server10.mp3quran.net/minsh/",
+            "abdul": "https://server6.mp3quran.net/abdul/",
+            "sudais": "https://server11.mp3quran.net/sudais/",
+            "yasser": "https://server8.mp3quran.net/yasser/"
+        };
+
+        async function loadSurahList() {
+            try {
+                const response = await fetch("https://api.alquran.cloud/v1/surah");
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    surahData = data.data;
+                    const surahList = document.getElementById("surah-list");
+                    surahData.forEach(surah => {
+                        const option = document.createElement("option");
+                        option.value = surah.number;
+                        option.textContent = `${surah.number} - ${surah.englishName} (${surah.name})`;
+                        surahList.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("فشل تحميل قائمة السور:", error);
+            }
+        }
+
+        async function getSurah() {
+            selectedSurah = document.getElementById("surah-list").value;
+            if (!selectedSurah) return;
+            
+            document.getElementById("quran-container").innerHTML = "⏳ جارِ التحميل...";
+            try {
+                const response = await fetch(`https://api.alquran.cloud/v1/surah/${selectedSurah}`);
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    const ayat = data.data.ayahs.map(ayah => `<p class="styleq">${ayah.text}<span>(${ayah.numberInSurah})</span></p>`).join("");
+                    document.getElementById("quran-container").innerHTML = `<h2>${data.data.name}</h2>` + ayat;
+                    updateAudio();
+                } else {
+                    document.getElementById("quran-container").innerText = "❌ حدث خطأ في جلب البيانات.";
+                }
+            } catch (error) {
+                document.getElementById("quran-container").innerText = "❌ فشل الاتصال بالخادم.";
+                console.error(error);
+            }
+        }
+
+        function updateAudio() {
+            const reciter = document.getElementById("reciter-list").value;
+            const audioElement = document.getElementById("quran-audio");
+
+            if (!selectedSurah) return;
+            
+            let audioUrl = `${reciterPaths[reciter]}${String(selectedSurah).padStart(3, '0')}.mp3`;
+            audioElement.src = audioUrl;
+            audioElement.hidden = false;
+            audioElement.play();
+        }
+
+        loadSurahList();
+    </script>
+
+</body>
+</html>
